@@ -2,6 +2,9 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 #include <d3d11.h>
+#include <windows.h>
+#include <dwmapi.h>  // For enabling transparency and DWM effects
+#pragma comment(lib, "dwmapi.lib")  // Link the DWM API library
 #include "skCrypter.h"
 #include "auth.hpp"
 #include <dxgi.h> // Include DXGI header
@@ -40,12 +43,58 @@ void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 ID3D11ShaderResourceView* CreateTextureFromFile(const char* filename);
 
+// Manually define missing structures
+typedef struct _ACCENT_POLICY {
+    int nAccentState;
+    int nFlags;
+    int nColor;
+    int nAnimationId;
+} ACCENT_POLICY;
+
+typedef struct _WINDOWCOMPOSITIONATTRIBDATA {
+    int nAttribute;
+    PVOID pData;
+    SIZE_T ulDataSize;
+} WINDOWCOMPOSITIONATTRIBDATA;
+
+// Declare function pointer
+typedef BOOL(WINAPI* pSetWindowCompositionAttribute)(HWND, WINDOWCOMPOSITIONATTRIBDATA*);
+
+// Function to enable blur and transparency
+void EnableBlurBehind(HWND hwnd) {
+    // Load user32.dll dynamically
+    HMODULE hUser = LoadLibraryA("user32.dll");
+    if (!hUser) return;
+
+    pSetWindowCompositionAttribute SetWindowCompositionAttribute =
+        (pSetWindowCompositionAttribute)GetProcAddress(hUser, "SetWindowCompositionAttribute");
+
+    if (SetWindowCompositionAttribute) {
+        ACCENT_POLICY accent = { 3, 0, 0, 0 };  // Enable blur effect
+        WINDOWCOMPOSITIONATTRIBDATA data = { 19, &accent, sizeof(accent) };
+
+        SetWindowCompositionAttribute(hwnd, &data);
+    }
+
+    FreeLibrary(hUser);
+
+    // Extend the window frame into the client area
+    MARGINS margins = { -1 };
+    DwmExtendFrameIntoClientArea(hwnd, &margins);
+}
+
 int main(int, char**)
 {
     // Create application window
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, _T("ImGui Example"), nullptr };
     ::RegisterClassEx(&wc);
-    HWND hwnd = ::CreateWindow(wc.lpszClassName, _T("Login Page"), WS_OVERLAPPEDWINDOW, 100, 100, 800, 600, nullptr, nullptr, wc.hInstance, nullptr);
+
+
+    //Remove the Title Bar and buttons
+    HWND hwnd = CreateWindow(wc.lpszClassName, _T("Login Page"), WS_POPUP | WS_SYSMENU, 100, 100, 800, 600, nullptr, nullptr, wc.hInstance, nullptr);
+
+    // Enable transparency & blur effect
+    EnableBlurBehind(hwnd);
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd))
@@ -288,6 +337,7 @@ ID3D11ShaderResourceView* CreateTextureFromFile(const char* filename)
 
 // Win32 message handler
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
@@ -303,13 +353,21 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             CreateRenderTarget();
         }
         return 0;
+
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
             return 0;
         break;
+
+    case WM_LBUTTONDOWN: // Allow dragging the window
+        ReleaseCapture();
+        SendMessage(hWnd, WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
+        return 0;
+
     case WM_DESTROY:
         ::PostQuitMessage(0);
         return 0;
     }
+
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }

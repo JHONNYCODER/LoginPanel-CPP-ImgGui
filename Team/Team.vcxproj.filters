@@ -91,7 +91,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
-    <None Include="..\.gitignore" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="library_x64.lib" />
