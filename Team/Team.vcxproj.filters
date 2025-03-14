@@ -39,6 +39,12 @@
     <ClCompile Include="vendor\imgui\backends\imgui_impl_dx11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TextureLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowButtons.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vendor\imgui\imconfig.h">
@@ -83,9 +89,30 @@
     <ClInclude Include="skCrypter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="nanosvgrast.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nanosvg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowButtons.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\background.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\minimize.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Maximize.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\cross.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

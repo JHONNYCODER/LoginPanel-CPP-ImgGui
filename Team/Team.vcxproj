@@ -113,7 +113,7 @@
       <AdditionalIncludeDirectories>C:\Users\Lord\Documents\Team\Team\Team\Team\vendor\imgui;C:\Users\Lord\Documents\Team\Team\Team\Team\vendor\imgui\backends;%(AdditionalIncludeDirectories);$(ProjectDir)\vendor\imgui\;$(ProjectDir)\vendor\imgui\backends\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\Program Files (x86)\Windows Kits\10\Lib\&lt;YourSDKVersion&gt;\um\x64</AdditionalLibraryDirectories>
@@ -130,7 +130,7 @@
       <AdditionalIncludeDirectories>;$(ProjectDir)\vendor\imgui\;$(ProjectDir)\vendor\imgui\backends\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -139,6 +139,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="TextureLoader.cpp" />
     <ClCompile Include="vendor\imgui\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="vendor\imgui\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
@@ -146,12 +147,16 @@
     <ClCompile Include="vendor\imgui\imgui_draw.cpp" />
     <ClCompile Include="vendor\imgui\imgui_tables.cpp" />
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="WindowButtons.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="auth.hpp" />
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="nanosvg.h" />
+    <ClInclude Include="nanosvgrast.h" />
     <ClInclude Include="skCrypter.h" />
     <ClInclude Include="skStr.h" />
+    <ClInclude Include="TextureLoader.h" />
     <ClInclude Include="utils.hpp" />
     <ClInclude Include="vendor\imgui\backends\imgui_impl_dx11.h" />
     <ClInclude Include="vendor\imgui\backends\imgui_impl_win32.h" />
@@ -162,9 +167,13 @@
     <ClInclude Include="vendor\imgui\imstb_rectpack.h" />
     <ClInclude Include="vendor\imgui\imstb_textedit.h" />
     <ClInclude Include="vendor\imgui\imstb_truetype.h" />
+    <ClInclude Include="WindowButtons.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\background.png" />
+    <Image Include="src\cross.png" />
+    <Image Include="src\Maximize.png" />
+    <Image Include="src\minimize.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
