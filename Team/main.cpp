@@ -230,6 +230,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         static char password[11] = "";
         static bool showPassword = false;
 
+        // Define placeholder color (full opacity light yellow)
+        ImU32 placeholderColor = IM_COL32(243, 253, 64, 255);
+
         // Move inputs slightly to the right
 
         ImGui::SetCursorPosX(moveRight);
@@ -241,6 +244,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         ImGui::SetNextItemWidth(150); // Reduce width of username input
         ImGui::InputText("##Username", username, IM_ARRAYSIZE(username));
 
+        // Draw placeholder for username if empty
+        if (strlen(username) == 0) {
+            ImVec2 pos = ImGui::GetItemRectMin(); // Get input box position
+            pos.x += 8.0f; // Small padding to the left
+            pos.y += 6.0f; // Adjust to match text alignment
+            ImGui::GetForegroundDrawList()->AddText(pos, placeholderColor, "eg. Test@email.com");
+        }
+
         ImGui::Spacing();  // Adds a small gap
         ImGui::Spacing();  // Adds a small gap
 
@@ -248,11 +259,20 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         ImGui::Text("Password");
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + moveRight);
         ImGui::SetNextItemWidth(150); // Reduce width of password input
+
         if (showPassword) {
             ImGui::InputText("##Password", password, IM_ARRAYSIZE(password));
         }
         else {
             ImGui::InputText("##Password", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
+        }
+
+        // Draw placeholder for password if empty
+        if (strlen(password) == 0) {
+            ImVec2 pos = ImGui::GetItemRectMin(); // Get input box position
+            pos.x += 8.0f; // Small padding to the left
+            pos.y += 6.0f; // Adjust to match text alignment
+            ImGui::GetForegroundDrawList()->AddText(pos, placeholderColor, "Password here");
         }
         
         ImGui::PopStyleVar(2); // Restore default styles
