@@ -23,7 +23,7 @@ static IDXGISwapChain* g_pSwapChain = nullptr;
 static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 static ID3D11ShaderResourceView* g_backgroundTexture = nullptr; // Background texture
 float colorOffset = 0.0f;
-float colorSpeed = 0.01f; // Adjust speed as needed
+float colorSpeed = 0.002f; // Adjust speed as needed
 HWND hwnd = nullptr; // Main window handle
 
 // Initialize KeyAuth
@@ -155,6 +155,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         MessageBox(hwnd, _T("Failed to connect to authentication server!"), _T("Error"), MB_ICONERROR);
     }
 
+    ImFont* myLargeFont = nullptr;  // Declare font pointer
+
+    myLargeFont = io.Fonts->AddFontFromFileTTF("C:\\Users\\Lord\\Documents\\Team\\Team\\Team\\Team\\src\\Font.ttf", 16.0f);
+    if (myLargeFont == nullptr)
+    {
+        OutputDebugStringA("Failed to load font!\n");
+    }
+
     // Main loop
     bool done = false;
     while (!done)
@@ -194,7 +202,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         ImDrawList* drawList = ImGui::GetBackgroundDrawList();
         ImVec2 windowPos = ImVec2(0, 0);
         ImVec2 windowSize = ImGui::GetIO().DisplaySize;
-        float thickness = 5.0f; // Border thickness
+        float thickness = 3.0f; // Border thickness
 
         // Create a gradient color
         ImColor color1 = ImColor::HSV(colorOffset, 1.0f, 1.0f); // Hue shifts over time
@@ -212,27 +220,60 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         style.Colors[ImGuiCol_Border] = ImVec4(0, 0, 0, 0);
 
         // Centered Login Window
-        ImGui::SetNextWindowPos(ImVec2((io.DisplaySize.x - 300) * 0.5f, (io.DisplaySize.y - 200) * 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(300, 200));
+        float moveRight = 120.0f; // Adjust this value for more shift
+        float loginPos = 130.0f; //Adjust the value for shift of Login button
+        ImGui::SetNextWindowPos(ImVec2((io.DisplaySize.x - 100) * 0.5f, (io.DisplaySize.y - 100) * 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(400, 300));
         ImGui::Begin("Login", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
 
-        static char username[128] = "";
-        static char password[128] = "";
+        static char username[32] = "";
+        static char password[11] = "";
         static bool showPassword = false;
 
+        // Move inputs slightly to the right
+
+        ImGui::SetCursorPosX(moveRight);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 8.0f));
+
         ImGui::Text("Username");
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + moveRight);
+        ImGui::SetNextItemWidth(150); // Reduce width of username input
         ImGui::InputText("##Username", username, IM_ARRAYSIZE(username));
 
+        ImGui::Spacing();  // Adds a small gap
+        ImGui::Spacing();  // Adds a small gap
+
+        ImGui::SetCursorPosX(moveRight);
         ImGui::Text("Password");
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + moveRight);
+        ImGui::SetNextItemWidth(150); // Reduce width of password input
         if (showPassword) {
             ImGui::InputText("##Password", password, IM_ARRAYSIZE(password));
         }
         else {
             ImGui::InputText("##Password", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
         }
+        
+        ImGui::PopStyleVar(2); // Restore default styles
+
+        // Keep "Show Password" aligned properly
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + moveRight);
         ImGui::Checkbox("Show Password", &showPassword);
 
-        if (ImGui::Button("Login")) {
+        // Align the login button properly
+
+        // Pop the styles to avoid affecting other elements
+        ImVec4 buttonColor = ImVec4(169 / 255.0f, 82 / 255.0f, 235 / 255.0f, 0.8f);   // Default (Purple)
+        ImVec4 hoverColor = ImVec4(217 / 255.0f, 246 / 255.0f, 63 / 255.0f, 0.62f);  // Hover (Soft Yellow-Green)
+
+
+        ImGui::NewLine();  // Moves to a new line
+        ImGui::SetCursorPosX(loginPos);
+        ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hoverColor);
+
+        if (ImGui::Button("Sign in -->", ImVec2(120, 30))) {
             KeyAuthApp.login(username, password);
 
             if (KeyAuthApp.response.success) {
@@ -242,6 +283,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 MessageBox(hwnd, _T("Invalid username or password!"), _T("Error"), MB_ICONERROR);
             }
         }
+
+        // Pop the styles to avoid affecting other elements
+        ImGui::PopStyleColor(2);
 
         ImGui::End();
 
@@ -433,4 +477,3 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
-
