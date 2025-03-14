@@ -16,6 +16,16 @@
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 
+// Global variables
+static ID3D11Device* g_pd3dDevice = nullptr;
+static ID3D11DeviceContext* g_pd3dDeviceContext = nullptr;
+static IDXGISwapChain* g_pSwapChain = nullptr;
+static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
+static ID3D11ShaderResourceView* g_backgroundTexture = nullptr; // Background texture
+float colorOffset = 0.0f;
+float colorSpeed = 0.01f; // Adjust speed as needed
+HWND hwnd = nullptr; // Main window handle
+
 // Initialize KeyAuth
 KeyAuth::api KeyAuthApp(
     skCrypt("Team").decrypt(),
@@ -26,24 +36,32 @@ KeyAuth::api KeyAuthApp(
     false
 );
 
-
-
-// Data
-static ID3D11Device* g_pd3dDevice = nullptr;
-static ID3D11DeviceContext* g_pd3dDeviceContext = nullptr;
-static IDXGISwapChain* g_pSwapChain = nullptr;
-static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
-static ID3D11ShaderResourceView* g_backgroundTexture = nullptr; // Background texture
-
 // Helper functions
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 void CreateRenderTarget();
 void CleanupRenderTarget();
+
+
+void SetRoundCorners(HWND hwnd, int radius) {
+    if (!hwnd) return; // Ensure valid window handle
+
+    RECT rect;
+    GetWindowRect(hwnd, &rect);
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+
+    HRGN hRgn = CreateRoundRectRgn(0, 0, width, height, radius, radius);
+    if (hRgn) {
+        SetWindowRgn(hwnd, hRgn, TRUE);
+        DeleteObject(hRgn); // Prevent memory leaks
+    }
+}
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 ID3D11ShaderResourceView* CreateTextureFromFile(const char* filename);
 
-// Manually define missing structures
+// Define the required structures globally
 typedef struct _ACCENT_POLICY {
     int nAccentState;
     int nFlags;
@@ -57,7 +75,7 @@ typedef struct _WINDOWCOMPOSITIONATTRIBDATA {
     SIZE_T ulDataSize;
 } WINDOWCOMPOSITIONATTRIBDATA;
 
-// Declare function pointer
+// Declare the function pointer type
 typedef BOOL(WINAPI* pSetWindowCompositionAttribute)(HWND, WINDOWCOMPOSITIONATTRIBDATA*);
 
 // Function to enable blur and transparency
@@ -66,6 +84,7 @@ void EnableBlurBehind(HWND hwnd) {
     HMODULE hUser = LoadLibraryA("user32.dll");
     if (!hUser) return;
 
+    // Get the address of SetWindowCompositionAttribute
     pSetWindowCompositionAttribute SetWindowCompositionAttribute =
         (pSetWindowCompositionAttribute)GetProcAddress(hUser, "SetWindowCompositionAttribute");
 
@@ -73,9 +92,11 @@ void EnableBlurBehind(HWND hwnd) {
         ACCENT_POLICY accent = { 3, 0, 0, 0 };  // Enable blur effect
         WINDOWCOMPOSITIONATTRIBDATA data = { 19, &accent, sizeof(accent) };
 
+        // Apply the blur effect
         SetWindowCompositionAttribute(hwnd, &data);
     }
 
+    // Free the library
     FreeLibrary(hUser);
 
     // Extend the window frame into the client area
@@ -83,19 +104,20 @@ void EnableBlurBehind(HWND hwnd) {
     DwmExtendFrameIntoClientArea(hwnd, &margins);
 }
 
-int main(int, char**)
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     // Create application window
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, _T("ImGui Example"), nullptr };
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, hInstance, nullptr, nullptr, nullptr, nullptr, _T("ImGui Example"), nullptr };
     ::RegisterClassEx(&wc);
 
+    // Remove the Title Bar and buttons
+    hwnd = CreateWindow(wc.lpszClassName, _T("Login Page"), WS_POPUP, 100, 100, 800, 600, nullptr, nullptr, wc.hInstance, nullptr);
 
-    //Remove the Title Bar and buttons
-    HWND hwnd = CreateWindow(wc.lpszClassName, _T("Login Page"), WS_POPUP | WS_SYSMENU, 100, 100, 800, 600, nullptr, nullptr, wc.hInstance, nullptr);
+    // Enable transparency
+    MARGINS margins = { -1 };
+    DwmExtendFrameIntoClientArea(hwnd, &margins);
 
-    // Enable transparency & blur effect
-    EnableBlurBehind(hwnd);
-
+ 
     // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd))
     {
@@ -107,6 +129,7 @@ int main(int, char**)
     // Show the window
     ::ShowWindow(hwnd, SW_SHOWDEFAULT);
     ::UpdateWindow(hwnd);
+    SetFocus(hwnd); // Ensure the window has focus
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -121,8 +144,15 @@ int main(int, char**)
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
     // Load background texture
-    g_backgroundTexture = CreateTextureFromFile("C:\\Users\\Lord\\Documents\\Team\\Team\\Team\\Team\\src\\background.png");    if (!g_backgroundTexture) {
+    g_backgroundTexture = CreateTextureFromFile("C:\\Users\\Lord\\Documents\\Team\\Team\\Team\\Team\\src\\background.png");
+    if (!g_backgroundTexture) {
         MessageBox(hwnd, _T("Failed to load background image!"), _T("Error"), MB_ICONERROR);
+    }
+
+    // Initialize KeyAuth once
+    KeyAuthApp.init();
+    if (!KeyAuthApp.response.success) {
+        MessageBox(hwnd, _T("Failed to connect to authentication server!"), _T("Error"), MB_ICONERROR);
     }
 
     // Main loop
@@ -141,6 +171,11 @@ int main(int, char**)
         if (done)
             break;
 
+        // Update animation offset
+            colorOffset += colorSpeed;
+        if (colorOffset > 1.0f) colorOffset -= 1.0f; // Loop the animation
+
+
         // Start the ImGui frame
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
@@ -149,23 +184,37 @@ int main(int, char**)
         // Render background image
         if (g_backgroundTexture) {
             ImGui::GetBackgroundDrawList()->AddImage(
-                (ImTextureID)g_backgroundTexture, // Cast to ImTextureID
-                ImVec2(0, 0), // Top-left corner
-                ImVec2(io.DisplaySize.x, io.DisplaySize.y) // Bottom-right corner (full screen)
+                (ImTextureID)g_backgroundTexture,
+                ImVec2(0, 0),
+                ImVec2(io.DisplaySize.x, io.DisplaySize.y)
             );
         }
+        
+        // Draw animated border
+        ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+        ImVec2 windowPos = ImVec2(0, 0);
+        ImVec2 windowSize = ImGui::GetIO().DisplaySize;
+        float thickness = 5.0f; // Border thickness
+
+        // Create a gradient color
+        ImColor color1 = ImColor::HSV(colorOffset, 1.0f, 1.0f); // Hue shifts over time
+        ImColor color2 = ImColor::HSV(colorOffset + 0.5f, 1.0f, 1.0f); // Complementary color
+
+        // Draw the border
+        drawList->AddRect(windowPos, windowSize, color1, 30.0f, 0, thickness); // Rounded corners
+        drawList->AddRect(windowPos, windowSize, color2, 30.0f, 0, thickness); // Complementary color
 
         // Customize ImGui style for a modern look
         ImGuiStyle& style = ImGui::GetStyle();
-        style.WindowRounding = 15.0f;  // Rounded corners
-        style.FrameRounding = 10.0f;   // Rounded input fields & buttons
-        style.Colors[ImGuiCol_WindowBg] = ImVec4(0, 0, 0, 0);  // Semi-transparent background
-        style.Colors[ImGuiCol_Border] = ImVec4(0, 0, 0, 0);   // Border glow effect
+        style.WindowRounding = 15.0f;
+        style.FrameRounding = 10.0f;
+        style.Colors[ImGuiCol_WindowBg] = ImVec4(0, 0, 0, 0);
+        style.Colors[ImGuiCol_Border] = ImVec4(0, 0, 0, 0);
 
         // Centered Login Window
         ImGui::SetNextWindowPos(ImVec2((io.DisplaySize.x - 300) * 0.5f, (io.DisplaySize.y - 200) * 0.5f));
         ImGui::SetNextWindowSize(ImVec2(300, 200));
-        ImGui::Begin("Login", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        ImGui::Begin("Login", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
 
         static char username[128] = "";
         static char password[128] = "";
@@ -184,23 +233,15 @@ int main(int, char**)
         ImGui::Checkbox("Show Password", &showPassword);
 
         if (ImGui::Button("Login")) {
-            KeyAuthApp.init();  // Initialize KeyAuth
+            KeyAuthApp.login(username, password);
 
-            if (!KeyAuthApp.response.success) {  // Check success flag
-                MessageBox(hwnd, _T("Failed to connect to authentication server!"), _T("Error"), MB_ICONERROR);
+            if (KeyAuthApp.response.success) {
+                MessageBox(hwnd, _T("Login successful!"), _T("Success"), MB_ICONINFORMATION);
             }
             else {
-                KeyAuthApp.login(username, password);
-
-                if (KeyAuthApp.response.success) {  // Check if login was successful
-                    MessageBox(hwnd, _T("Login successful!"), _T("Success"), MB_ICONINFORMATION);
-                }
-                else {
-                    MessageBox(hwnd, _T("Invalid username or password!"), _T("Error"), MB_ICONERROR);
-                }
+                MessageBox(hwnd, _T("Invalid username or password!"), _T("Error"), MB_ICONERROR);
             }
         }
-
 
         ImGui::End();
 
@@ -219,10 +260,10 @@ int main(int, char**)
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    if (g_backgroundTexture) {
+  if (g_backgroundTexture) {
         g_backgroundTexture->Release();
         g_backgroundTexture = nullptr;
-    }
+    } 
 
     CleanupDeviceD3D();
     ::DestroyWindow(hwnd);
@@ -234,7 +275,6 @@ int main(int, char**)
 // Helper functions
 bool CreateDeviceD3D(HWND hWnd)
 {
-    // Setup swap chain
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.BufferCount = 2;
@@ -291,7 +331,6 @@ ID3D11ShaderResourceView* CreateTextureFromFile(const char* filename)
         return nullptr;
     }
 
-    // Create texture description
     D3D11_TEXTURE2D_DESC desc;
     ZeroMemory(&desc, sizeof(desc));
     desc.Width = width;
@@ -303,7 +342,6 @@ ID3D11ShaderResourceView* CreateTextureFromFile(const char* filename)
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-    // Create texture
     D3D11_SUBRESOURCE_DATA initData;
     initData.pSysMem = image_data;
     initData.SysMemPitch = width * 4; // 4 bytes per pixel (RGBA)
@@ -316,7 +354,6 @@ ID3D11ShaderResourceView* CreateTextureFromFile(const char* filename)
         return nullptr;
     }
 
-    // Create shader resource view
     ID3D11ShaderResourceView* textureView = nullptr;
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
     ZeroMemory(&srvDesc, sizeof(srvDesc));
@@ -343,8 +380,37 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return true;
 
+    if (ImGui::GetCurrentContext() != nullptr)  // Prevent access violation
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        if (!io.WantCaptureMouse)
+        {
+            if (msg == WM_LBUTTONDOWN)
+                OutputDebugStringA("Left Mouse Click\n");
+        }
+
+        if (!io.WantCaptureKeyboard)
+        {
+            if (msg == WM_KEYDOWN)
+                OutputDebugStringA("Key Pressed\n");
+        }
+    }
+
     switch (msg)
     {
+    case WM_CREATE:
+        SetRoundCorners(hWnd, 50);
+        break;
+
+    case WM_NCHITTEST:
+    {
+        LRESULT hit = DefWindowProc(hWnd, msg, wParam, lParam);
+        if (hit == HTCLIENT && ImGui::GetCurrentContext() && !ImGui::GetIO().WantCaptureMouse)
+            return HTCAPTION;
+        return hit;
+    }
+
     case WM_SIZE:
         if (g_pd3dDevice != nullptr && wParam != SIZE_MINIMIZED)
         {
@@ -355,19 +421,16 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_SYSCOMMAND:
-        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+        if ((wParam & 0xfff0) == SC_KEYMENU)
             return 0;
         break;
 
-    case WM_LBUTTONDOWN: // Allow dragging the window
-        ReleaseCapture();
-        SendMessage(hWnd, WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
-        return 0;
-
     case WM_DESTROY:
+        ImGui::DestroyContext();  // Destroy ImGui AFTER the window is closed
         ::PostQuitMessage(0);
         return 0;
     }
 
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
+
